@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Building2, Users, MapPin, Globe, TrendingUp, Search, Heart, Star, Plus, X, Calendar, Mail, Phone, Linkedin, Twitter, Github, ExternalLink, Upload } from "lucide-react"
+import { ArrowLeft, Building2, Users, MapPin, Globe, TrendingUp, Search, Heart, Star, Plus, X, Calendar, Mail, Phone, Linkedin, Twitter, Github, ExternalLink, Upload, Trash2 } from "lucide-react"
 
 export default function ExplorePage({ onBack }: { onBack?: () => void }) {
   const router = useRouter()
@@ -117,6 +117,36 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
     }
   }
 
+  const handleDeleteProfile = async (profileId: string) => {
+    if (!user) {
+      return
+    }
+
+    if (!confirm("Are you sure you want to delete this profile? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/explore/${profileId}`, {
+        method: "DELETE",
+      })
+      if (response.ok) {
+        // Remove from local state
+        setProfiles(profiles.filter((p: any) => p.id !== profileId))
+        setFeaturedProfiles(featuredProfiles.filter((p: any) => p.id !== profileId))
+        if (selectedProfile?.id === profileId) {
+          setSelectedProfile(null)
+        }
+      } else {
+        const error = await response.json()
+        alert(error.error || "Failed to delete profile")
+      }
+    } catch (error) {
+      console.error("Error deleting profile:", error)
+      alert("Failed to delete profile. Please try again.")
+    }
+  }
+
   const filteredProfiles = profiles.filter((profile) => {
     const matchesSearch =
       profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,6 +169,7 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
         profile={selectedProfile}
         onBack={() => setSelectedProfile(null)}
         onLike={handleLike}
+        onDelete={handleDeleteProfile}
         user={user}
       />
     )
@@ -255,6 +286,7 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
                         profile={profile}
                         onClick={() => handleProfileClick(profile)}
                         onLike={handleLike}
+                        onDelete={handleDeleteProfile}
                         user={user}
                       />
                     ))}
@@ -275,6 +307,7 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
                         profile={profile}
                         onClick={() => handleProfileClick(profile)}
                         onLike={handleLike}
+                        onDelete={handleDeleteProfile}
                         user={user}
                       />
                     ))}
@@ -309,7 +342,8 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
   )
 }
 
-function ProfileCard({ profile, onClick, onLike, user }: any) {
+function ProfileCard({ profile, onClick, onLike, onDelete, user }: any) {
+  const isCreator = user && profile.userId === user.id
   return (
     <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-6 hover:shadow-md transition cursor-pointer">
       <div className="flex items-start gap-4 mb-4" onClick={onClick}>
@@ -374,15 +408,30 @@ function ProfileCard({ profile, onClick, onLike, user }: any) {
           <Heart size={16} className={profile.isLiked ? "fill-current" : ""} />
           <span>{profile.likesCount || 0}</span>
         </button>
-        <div className="text-xs text-gray-500 dark:text-white">
-          {profile.viewCount || 0} views
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-gray-500 dark:text-white">
+            {profile.viewCount || 0} views
+          </div>
+          {isCreator && onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(profile.id)
+              }}
+              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
+              title="Delete profile"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-function ProfileDetailView({ profile, onBack, onLike, user }: any) {
+function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
+  const isCreator = user && profile.userId === user.id
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
       {/* Header */}
@@ -464,6 +513,16 @@ function ProfileDetailView({ profile, onBack, onLike, user }: any) {
                   <div className="text-sm text-gray-500 dark:text-white">
                     {profile.viewCount || 0} views
                   </div>
+                  {isCreator && onDelete && (
+                    <button
+                      onClick={() => onDelete(profile.id)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800"
+                      title="Delete profile"
+                    >
+                      <Trash2 size={18} />
+                      <span>Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

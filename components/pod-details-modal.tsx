@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { X, Users, Mail } from "lucide-react"
+import { Users, Mail } from "lucide-react"
 import InviteMemberModal from "./invite-member-modal"
 
 export default function PodDetailsModal({ open, onClose, pod, user }: {
@@ -51,17 +51,9 @@ export default function PodDetailsModal({ open, onClose, pod, user }: {
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <div className="flex justify-between items-start">
-              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                Pod Details
-              </DialogTitle>
-              <button
-                onClick={onClose}
-                className="text-gray-400 dark:text-white hover:text-gray-600 dark:hover:text-black transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              Pod Details
+            </DialogTitle>
           </DialogHeader>
 
           {loading ? (
