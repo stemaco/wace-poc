@@ -8,8 +8,8 @@ if (!MONGODB_URI) {
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
+ * in development and serverless function invocations in production.
+ * This prevents connections growing exponentially during API Route usage.
  */
 declare global {
   var mongoose: {
@@ -18,11 +18,7 @@ declare global {
   }
 }
 
-let cached = global.mongoose
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null }
-}
+let cached = global.mongoose || { conn: null, promise: null }
 
 async function connectDB() {
   if (cached.conn) {
@@ -45,6 +41,8 @@ async function connectDB() {
     cached.promise = null
     throw e
   }
+
+  global.mongoose = cached
 
   return cached.conn
 }
