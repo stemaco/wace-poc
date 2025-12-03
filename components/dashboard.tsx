@@ -47,14 +47,21 @@ export default function Dashboard() {
     }
   }
 
+  const [isNavigating, setIsNavigating] = useState(false)
+
   const handlePodClick = (pod) => {
+    if (isNavigating || isLoading) return // Prevent multiple clicks
+    
+    setIsNavigating(true)
     setActivePod(pod)
     setActiveView("canvas")
     setIsLoading(true)
-    // Simulate loading delay
+    
+    // Small delay to show loading state, then load
     setTimeout(() => {
       setIsLoading(false)
-    }, 800)
+      setIsNavigating(false)
+    }, 300)
   }
 
   const handleBackToDashboard = () => {

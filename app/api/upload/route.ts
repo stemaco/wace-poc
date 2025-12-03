@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import connectDB from '@/lib/mongodb'
+import mongoose from 'mongoose'
+import { GridFSBucket } from 'mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +10,8 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    await connectDB()
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -37,26 +39,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', type)
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
+    // Convert file to buffer
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+
+    // Store file in GridFS
+    const db = mongoose.connection.db
+    if (!db) {
+      return NextResponse.json(
+        { error: 'Database connection error' },
+        { status: 500 }
+      )
     }
 
+    const bucket = new GridFSBucket(db, { bucketName: 'uploads' })
+    
     // Generate unique filename
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
     const fileExtension = file.name.split('.').pop()
-    const fileName = `${timestamp}-${randomString}.${fileExtension}`
-    const filePath = join(uploadsDir, fileName)
+    const fileName = `${type}/${timestamp}-${randomString}.${fileExtension}`
+    
+    // Create a new ObjectId for the file
+    const fileId = new mongoose.Types.ObjectId()
+    
+    const uploadStream = bucket.openUploadStreamWithId(fileId, fileName, {
+      contentType: file.type,
+      metadata: {
+        type,
+        uploadedBy: session.user.id,
+        uploadedAt: new Date(),
+      },
+    })
 
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+    // Write buffer to GridFS
+    await new Promise<void>((resolve, reject) => {
+      uploadStream.on('finish', resolve)
+      uploadStream.on('error', reject)
+      uploadStream.end(buffer)
+    })
 
     // Return the public URL
-    const fileUrl = `/uploads/${type}/${fileName}`
+    const fileUrl = `/api/upload/${fileId.toString()}`
 
     return NextResponse.json({
       success: true,

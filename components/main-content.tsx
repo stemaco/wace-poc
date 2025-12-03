@@ -42,8 +42,8 @@ export default function MainContent({ activeView, activePod, onPodClick, onBackT
   // Fetch notifications
   useEffect(() => {
     fetchNotifications()
-    // Poll for notifications every 5 seconds
-    const interval = setInterval(fetchNotifications, 5000)
+    // Poll for notifications every 30 seconds (reduced from 5 seconds)
+    const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [])
 
@@ -387,8 +387,8 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
   useEffect(() => {
     if (blocks.chat && blocks.chat.length > 0) {
       fetchUnreadCounts()
-      // Poll for unread counts every 5 seconds
-      const interval = setInterval(fetchUnreadCounts, 5000)
+      // Poll for unread counts every 30 seconds (reduced from 5 seconds)
+      const interval = setInterval(fetchUnreadCounts, 30000)
       return () => clearInterval(interval)
     }
   }, [blocks.chat])
@@ -460,6 +460,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
 
   // Blocks are fetched from API - no hardcoded data
   const [selectedBox, setSelectedBox] = useState<string | null>(null)
+  const [openingBox, setOpeningBox] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragStart, setDragStart] = useState({ mouseX: 0, mouseY: 0, blockX: 0, blockY: 0 })
   const [pendingDrag, setPendingDrag] = useState<{ boxId: string | null, initialPos: { x: number, y: number } | null, delay: NodeJS.Timeout | null }>({ boxId: null, initialPos: null, delay: null })
@@ -476,6 +477,11 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     e.stopPropagation()
     e.preventDefault()
     
+    // Prevent multiple clicks
+    if (openingBox || selectedBox === boxId) return
+    
+    setOpeningBox(boxId)
+    
     // Cancel any pending drag immediately
     if (pendingDrag.delay) {
       clearTimeout(pendingDrag.delay)
@@ -487,7 +493,10 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     
     // Check block access before opening
     const box = currentBlocks.find((b: any) => b.id === boxId)
-    if (!box) return
+    if (!box) {
+      setOpeningBox(null)
+      return
+    }
 
     // Check if user is creator or has block access (only for chat and docs)
     const isCreator = user && box.creatorId === user.id
@@ -501,22 +510,29 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           const hasAccess = data.members.some((m: any) => m.id === user?.id)
           if (!hasAccess) {
             alert("You don't have access to this block. Ask the creator to add you.")
+            setOpeningBox(null)
             return
           }
         } else {
           // If error, assume no access
           alert("You don't have access to this block. Ask the creator to add you.")
+          setOpeningBox(null)
           return
         }
       } catch (error) {
         console.error("Error checking block access:", error)
         alert("Error checking access. Please try again.")
+        setOpeningBox(null)
         return
       }
     }
     
-    // Open the modal
-    setSelectedBox(boxId)
+    // Small delay to prevent rapid clicks
+    setTimeout(() => {
+      // Open the modal
+      setSelectedBox(boxId)
+      setOpeningBox(null)
+    }, 100)
   }
 
   const handleMouseDown = (e, boxId) => {
