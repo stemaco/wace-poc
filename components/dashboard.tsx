@@ -111,7 +111,7 @@ export default function Dashboard() {
   const shouldShowSidebar = !["explore", "canvas"].includes(activeView)
 
   return (
-    <div className="flex h-screen bg-white dark:bg-black">
+    <div className="flex h-screen bg-gray-50 dark:bg-black">
       {shouldShowSidebar && (
         <Sidebar 
           activeView={activeView} 

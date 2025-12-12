@@ -191,25 +191,31 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
         </DialogHeader>
 
         {success ? (
-          <div className="py-8 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserPlus size={32} className="text-green-600 dark:text-green-400" />
+          <div className="py-12 text-center animate-in fade-in-0 zoom-in-95 duration-300">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-green-50 dark:ring-green-900/20">
+              <UserPlus size={36} className="text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Member Added!
             </p>
-            <p className="text-sm text-gray-600 dark:text-white">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               The user has been added to the pod successfully.
             </p>
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "invite" | "direct")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="direct" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100 dark:bg-gray-800">
+              <TabsTrigger 
+                value="direct" 
+                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900"
+              >
                 <UserPlus size={16} />
                 Add Directly
               </TabsTrigger>
-              <TabsTrigger value="invite" className="flex items-center gap-2">
+              <TabsTrigger 
+                value="invite" 
+                className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900"
+              >
                 <Mail size={16} />
                 Send Invitation
               </TabsTrigger>
@@ -240,22 +246,23 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
               </div>
 
               {searchQuery.length >= 2 && (
-                <div className="border border-gray-200 dark:border-white rounded-lg max-h-60 overflow-y-auto">
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-60 overflow-y-auto shadow-sm">
                   {isSearching ? (
-                    <div className="p-4 text-center">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" />
+                    <div className="p-6 text-center">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400 dark:text-gray-500" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Searching...</p>
                     </div>
                   ) : searchResults.length > 0 ? (
-                    <div className="divide-y divide-gray-200 dark:divide-white">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
                       {searchResults.map((user) => (
                         <div
                           key={user.id}
-                          className="p-3 hover:bg-gray-50 dark:hover:bg-white/10 flex items-center justify-between"
+                          className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between"
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-9 w-9 ring-2 ring-gray-200 dark:ring-gray-700">
                               <AvatarImage src={user.profilePicture} />
-                              <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white text-xs">
+                              <AvatarFallback className="bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold">
                                 {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -263,7 +270,7 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {user.name || "No name"}
                               </p>
-                              <p className="text-xs text-gray-500 dark:text-white truncate">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {user.email}
                               </p>
                             </div>
@@ -272,7 +279,7 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
                             size="sm"
                             onClick={() => handleDirectAdd(user.id)}
                             disabled={isAdding === user.id}
-                            className="ml-2 bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-white"
+                            className="ml-2 bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-sm hover:shadow"
                           >
                             {isAdding === user.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -284,8 +291,9 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
                       ))}
                     </div>
                   ) : (
-                    <div className="p-4 text-center text-sm text-gray-500 dark:text-white">
-                      No users found
+                    <div className="p-6 text-center">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No users found</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different search term</p>
                     </div>
                   )}
                 </div>
@@ -326,7 +334,7 @@ export default function InviteMemberModal({ open, onClose, pod, onMemberAdded }:
                 </div>
 
                 {error && (
-                  <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                  <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg animate-in fade-in-0 slide-in-from-top-1">
                     {error}
                   </div>
                 )}

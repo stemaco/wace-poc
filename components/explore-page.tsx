@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Building2, Users, MapPin, Globe, TrendingUp, Search, Heart, Star, Plus, X, Calendar, Mail, Phone, Linkedin, Twitter, Github, ExternalLink, Upload, Trash2 } from "lucide-react"
+import { ArrowLeft, Building2, Users, MapPin, Globe, TrendingUp, Search, Heart, Star, Plus, X, Calendar, Mail, Phone, Linkedin, Twitter, Github, ExternalLink, Upload, Trash2, MoreVertical, Grid3x3, Move } from "lucide-react"
 
 export default function ExplorePage({ onBack }: { onBack?: () => void }) {
   const router = useRouter()
@@ -15,6 +15,7 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
   const [user, setUser] = useState<any>(null)
   const [showShowcaseModal, setShowShowcaseModal] = useState(false)
   const [pods, setPods] = useState<any[]>([])
+  const [viewMode, setViewMode] = useState<"grid" | "swipe">("grid")
 
   useEffect(() => {
     fetchProfiles()
@@ -55,14 +56,20 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
       const featuredResponse = await fetch("/api/explore?featured=true")
       if (featuredResponse.ok) {
         const featuredData = await featuredResponse.json()
-        setFeaturedProfiles(featuredData.profiles || [])
+        const onlyWace = (featuredData.profiles || []).filter(
+          (profile: any) => profile?.name?.toLowerCase() === "wace"
+        )
+        setFeaturedProfiles(onlyWace)
       }
 
       // Fetch all profiles
       const allResponse = await fetch(`/api/explore${filterType !== "all" ? `?type=${filterType}` : ""}`)
       if (allResponse.ok) {
         const allData = await allResponse.json()
-        setProfiles(allData.profiles || [])
+        const onlyWace = (allData.profiles || []).filter(
+          (profile: any) => profile?.name?.toLowerCase() === "wace"
+        )
+        setProfiles(onlyWace)
       }
     } catch (error) {
       console.error("Error fetching profiles:", error)
@@ -178,7 +185,7 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
       {/* Header - Fixed at top */}
-      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-4 flex-1">
           {onBack ? (
             <button
@@ -204,64 +211,101 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
             </p>
           </div>
         </div>
-        {user && (
-          <button
-            onClick={() => setShowShowcaseModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition"
-          >
-            <Plus size={18} />
-            <span>Showcase Pod</span>
-          </button>
-        )}
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white px-8 py-4">
-        <div className="flex gap-4 items-center">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white" size={18} />
-            <input
-              type="text"
-              placeholder="Search profiles..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 dark:focus:ring-white"
-            />
-          </div>
-          <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-white rounded-lg p-1">
             <button
-              onClick={() => setFilterType("all")}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterType === "all"
-                  ? "bg-black dark:bg-white text-white dark:text-black"
-                  : "bg-gray-100 dark:bg-black text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setViewMode("grid")
+              }}
+              className={`p-2 rounded-md transition-all ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-black text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-black"
               }`}
+              title="Grid View"
             >
-              All
+              <Grid3x3 size={18} />
             </button>
             <button
-              onClick={() => setFilterType("startup")}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterType === "startup"
-                  ? "bg-black dark:bg-white text-white dark:text-black"
-                  : "bg-gray-100 dark:bg-black text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setViewMode("swipe")
+              }}
+              className={`p-2 rounded-md transition-all ${
+                viewMode === "swipe"
+                  ? "bg-white dark:bg-black text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-600 dark:text-white hover:text-gray-900 dark:hover:text-black"
               }`}
+              title="Swipe View"
             >
-              Startups
-            </button>
-            <button
-              onClick={() => setFilterType("agency")}
-              className={`px-4 py-2 rounded-lg transition ${
-                filterType === "agency"
-                  ? "bg-black dark:bg-white text-white dark:text-black"
-                  : "bg-gray-100 dark:bg-black text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800"
-              }`}
-            >
-              Agencies
+              <Move size={18} />
             </button>
           </div>
+          {user && (
+            <button
+              onClick={() => setShowShowcaseModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-black rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-sm hover:shadow"
+            >
+              <Plus size={18} />
+              <span>Showcase Pod</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Search and Filters - Hidden in swipe view */}
+      {viewMode === "grid" && (
+        <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-8 py-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white" size={18} />
+              <input
+                type="text"
+                placeholder="Search profiles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 focus:border-transparent transition-all"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterType("all")}
+                className={`px-4 py-2 rounded-lg transition-all font-medium ${
+                  filterType === "all"
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-black shadow-sm"
+                    : "bg-gray-100 dark:bg-white text-gray-700 dark:text-black hover:bg-gray-200 dark:hover:bg-white"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilterType("startup")}
+                className={`px-4 py-2 rounded-lg transition-all font-medium ${
+                  filterType === "startup"
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-black shadow-sm"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                Startups
+              </button>
+              <button
+                onClick={() => setFilterType("agency")}
+                className={`px-4 py-2 rounded-lg transition-all font-medium ${
+                  filterType === "agency"
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-black shadow-sm"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                Agencies
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-black">
@@ -272,8 +316,8 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
             </div>
           ) : (
             <>
-              {/* Featured Section */}
-              {filteredFeatured.length > 0 && (
+              {/* Featured Section - Only show in grid mode */}
+              {filteredFeatured.length > 0 && viewMode === "grid" && (
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-4">
                     <Star className="text-yellow-500" size={20} />
@@ -296,22 +340,39 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
 
               {/* All Profiles Section */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  {filterType === "all" ? "All Profiles" : filterType === "startup" ? "Startups" : "Agencies"}
-                </h2>
+                {viewMode === "grid" && (
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    {filterType === "all" ? "All Profiles" : filterType === "startup" ? "Startups" : "Agencies"}
+                  </h2>
+                )}
+                {viewMode === "swipe" && (
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    {filterType === "all" ? "All Profiles" : filterType === "startup" ? "Startups" : "Agencies"}
+                  </h2>
+                )}
                 {filteredProfiles.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredProfiles.map((profile) => (
-                      <ProfileCard
-                        key={profile.id}
-                        profile={profile}
-                        onClick={() => handleProfileClick(profile)}
-                        onLike={handleLike}
-                        onDelete={handleDeleteProfile}
-                        user={user}
-                      />
-                    ))}
-                  </div>
+                  viewMode === "grid" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {filteredProfiles.map((profile) => (
+                        <ProfileCard
+                          key={profile.id}
+                          profile={profile}
+                          onClick={() => handleProfileClick(profile)}
+                          onLike={handleLike}
+                          onDelete={handleDeleteProfile}
+                          user={user}
+                        />
+                      ))}
+                    </div>
+                  ) : viewMode === "swipe" ? (
+                    <SwipeView
+                      profiles={filteredProfiles}
+                      onProfileClick={handleProfileClick}
+                      onLike={handleLike}
+                      onDelete={handleDeleteProfile}
+                      user={user}
+                    />
+                  ) : null
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-gray-500 dark:text-white">
@@ -344,86 +405,206 @@ export default function ExplorePage({ onBack }: { onBack?: () => void }) {
 
 function ProfileCard({ profile, onClick, onLike, onDelete, user }: any) {
   const isCreator = user && profile.userId === user.id
+  const [showMenu, setShowMenu] = useState(false)
+
+  const getLevel = () => {
+    if (profile.type === "startup" && profile.fundingStage) {
+      return profile.fundingStage.replace("-", " ").split(' ').map((word: string) => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ')
+    }
+    if (profile.type === "agency" && profile.yearsOfExperience) {
+      return `${profile.yearsOfExperience} years`
+    }
+    return "N/A"
+  }
+
+  const getDate = () => {
+    if (profile.dateStarted) {
+      return new Date(profile.dateStarted).toLocaleDateString('en-US', { 
+        month: 'numeric', 
+        day: 'numeric', 
+        year: '2-digit' 
+      })
+    }
+    if (profile.type === "agency" && profile.yearsOfExperience) {
+      return "Established"
+    }
+    return "N/A"
+  }
+
+
   return (
-    <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-6 hover:shadow-md transition cursor-pointer">
-      <div className="flex items-start gap-4 mb-4" onClick={onClick}>
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          {profile.logoUrl ? (
-            <img src={profile.logoUrl} alt={profile.name} className="w-full h-full object-cover rounded-lg" />
-          ) : (
-            <Building2 size={32} className="text-white" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
-                {profile.name}
-              </h3>
-              {profile.tagline && (
-                <p className="text-sm text-gray-600 dark:text-white line-clamp-1 mb-2">{profile.tagline}</p>
-              )}
-              {profile.description && (
-                <p className="text-sm text-gray-500 dark:text-white line-clamp-3">{profile.description}</p>
-              )}
-            </div>
-            {profile.isFeatured && (
-              <Star className="text-yellow-500 flex-shrink-0" size={16} />
+    <div 
+      className="group bg-white dark:bg-black rounded-xl shadow-sm border border-gray-200 dark:border-white/20 p-6 hover:shadow-xl transition-all duration-300 cursor-pointer relative overflow-hidden"
+      onClick={onClick}
+    >
+      {/* Hover gradient effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-purple-50/0 group-hover:from-blue-50/50 group-hover:to-purple-50/50 dark:group-hover:from-blue-950/10 dark:group-hover:to-purple-950/10 transition-all duration-300 pointer-events-none"></div>
+      
+      {/* Top section with profile picture and menu */}
+      <div className="relative flex items-start justify-between mb-4">
+        <div className="relative">
+          {/* Circular profile picture */}
+          <div className="relative w-16 h-16 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-white/20 group-hover:ring-blue-400 dark:group-hover:ring-white/30 transition-all duration-300">
+            {profile.logoUrl ? (
+              <img 
+                src={profile.logoUrl} 
+                alt={profile.name} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <Building2 size={24} className="text-white" />
+              </div>
             )}
           </div>
         </div>
+        
+        {/* Three-dot menu */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowMenu(!showMenu)
+            }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors opacity-0 group-hover:opacity-100"
+            title="More options"
+          >
+            <MoreVertical size={18} className="text-gray-600 dark:text-gray-400" />
+          </button>
+          
+          {/* Dropdown menu */}
+          {showMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu(false)
+                }}
+              ></div>
+              <div className="absolute right-0 top-8 z-20 w-48 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-white/20 py-1 animate-in fade-in-0 slide-in-from-top-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClick()
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onLike(profile.id, profile.isLiked)
+                    setShowMenu(false)
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {profile.isLiked ? "Unlike" : "Like"}
+                </button>
+                {isCreator && onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete(profile.id)
+                      setShowMenu(false)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Delete Profile
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-white mb-4" onClick={onClick}>
-        {profile.location && (
-          <div className="flex items-center gap-1">
-            <MapPin size={12} />
-            <span>{profile.location}</span>
+
+      {/* Name and Role */}
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          {profile.name}
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium mb-2">
+          {profile.tagline || (profile.type === "startup" ? "Startup" : "Agency")}
+        </p>
+        {/* Short description/oneliner */}
+        {(profile.description || profile.tagline) && (
+          <p className="text-sm text-gray-500 dark:text-gray-500 line-clamp-2">
+            {profile.description || profile.tagline}
+          </p>
+        )}
+      </div>
+
+      {/* Level and Date */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Level</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate capitalize">
+            {getLevel()}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">
+            {profile.dateStarted ? "Started" : profile.type === "agency" ? "Experience" : "Date"}
+          </p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {getDate()}
+          </p>
+        </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-white/20">
+        {profile.contactEmail && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Mail size={14} className="flex-shrink-0" />
+            <span className="truncate">{profile.contactEmail}</span>
           </div>
         )}
-        {profile.fundingStage && (
-          <div className="flex items-center gap-1">
-            <TrendingUp size={12} />
-            <span className="capitalize">{profile.fundingStage.replace("-", " ")}</span>
+        {profile.contactPhone && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Phone size={14} className="flex-shrink-0" />
+            <span>{profile.contactPhone}</span>
           </div>
         )}
-        {profile.type === "agency" && profile.yearsOfExperience && (
-          <div className="flex items-center gap-1">
-            <Calendar size={12} />
-            <span>{profile.yearsOfExperience} years</span>
+        {!profile.contactEmail && !profile.contactPhone && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500">
+            <Mail size={14} className="flex-shrink-0" />
+            <span>No contact info</span>
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white">
+
+      {/* Bottom actions */}
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-white/20">
         <button
           onClick={(e) => {
             e.stopPropagation()
             onLike(profile.id, profile.isLiked)
           }}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
             profile.isLiked
-              ? "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300"
-              : "bg-gray-100 dark:bg-black text-gray-600 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800"
+              ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
-          <Heart size={16} className={profile.isLiked ? "fill-current" : ""} />
-          <span>{profile.likesCount || 0}</span>
+          <Heart 
+            size={14} 
+            className={profile.isLiked ? "fill-current" : ""} 
+          />
+          <span className="text-xs font-medium">{profile.likesCount || 0}</span>
         </button>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-gray-500 dark:text-white">
+        <div className="flex items-center gap-3">
+          {profile.isFeatured && (
+            <Star className="text-yellow-500 fill-current" size={16} />
+          )}
+          <div className="text-xs text-gray-500 dark:text-gray-500">
             {profile.viewCount || 0} views
           </div>
-          {isCreator && onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(profile.id)
-              }}
-              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
-              title="Delete profile"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -435,7 +616,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-black">
       {/* Header */}
-      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white px-8 py-4 flex items-center gap-4">
+      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-white/20 px-8 py-4 flex items-center gap-4">
         <button
           onClick={onBack}
           className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-black rounded-lg transition"
@@ -449,7 +630,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
       <div className="flex-1 overflow-auto bg-gray-50 dark:bg-black">
         <div className="max-w-4xl mx-auto p-8">
           {/* Profile Header */}
-          <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8 mb-6">
+          <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8 mb-6">
             <div className="flex items-start gap-6">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 {profile.logoUrl ? (
@@ -530,7 +711,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
 
           {/* Description */}
           {profile.description && (
-            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8 mb-6">
+            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">About</h2>
               <p className="text-gray-700 dark:text-white leading-relaxed">{profile.description}</p>
             </div>
@@ -538,7 +719,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
 
           {/* Startup Specific Info */}
           {profile.type === "startup" && (
-            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8 mb-6">
+            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Startup Details</h2>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {profile.dateStarted && (
@@ -578,7 +759,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
 
           {/* Agency Specific Info */}
           {profile.type === "agency" && (
-            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8 mb-6">
+            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Agency Details</h2>
               {profile.services && profile.services.length > 0 && (
                 <div className="mb-4">
@@ -615,7 +796,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
 
           {/* Team Members Section (for both types) */}
           {profile.teamMembers && profile.teamMembers.length > 0 && (
-            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8 mb-6">
+            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Team</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {profile.teamMembers.map((member: any, i: number) => (
@@ -632,7 +813,7 @@ function ProfileDetailView({ profile, onBack, onLike, onDelete, user }: any) {
 
           {/* Contact Information */}
           {(profile.contactEmail || profile.contactPhone || profile.socialLinks || profile.website) && (
-            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white p-8">
+            <div className="bg-white dark:bg-black rounded-lg shadow-sm border border-gray-200 dark:border-white/20 p-8">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Contact</h2>
               <div className="space-y-3">
                 {profile.contactEmail && (
@@ -911,7 +1092,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
           className="fixed inset-0 bg-black dark:bg-white bg-opacity-20 dark:bg-opacity-20 z-40"
           onClick={onClose}
         />
-        <div className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-black rounded-xl shadow-2xl z-50 border border-gray-200 dark:border-white">
+        <div className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-black rounded-xl shadow-2xl z-50 border border-gray-200 dark:border-white/20">
           <div className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Showcase Your Pod</h2>
@@ -961,7 +1142,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 <select
                   value={selectedPod}
                   onChange={(e) => setSelectedPod(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   <option value="">Create New Profile</option>
                   {pods.map((pod: any) => (
@@ -991,7 +1172,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
         className="fixed inset-0 bg-black dark:bg-white bg-opacity-20 dark:bg-opacity-20 z-40"
         onClick={onClose}
       />
-      <div className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black rounded-xl shadow-2xl z-50 border border-gray-200 dark:border-white">
+      <div className="fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black rounded-xl shadow-2xl z-50 border border-gray-200 dark:border-white/20">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Profile</h2>
@@ -1019,7 +1200,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
               />
             </div>
 
@@ -1029,7 +1210,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
               </label>
               {logoPreview ? (
                 <div className="relative mb-2">
-                  <div className="w-32 h-32 border border-gray-300 dark:border-white rounded-lg overflow-hidden">
+                  <div className="w-32 h-32 border border-gray-300 dark:border-white/20 rounded-lg overflow-hidden">
                     <img
                       src={logoPreview}
                       alt="Logo preview"
@@ -1045,7 +1226,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                   </button>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 dark:border-white rounded-lg p-6 text-center">
+                <div className="border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg p-6 text-center">
                   <input
                     type="file"
                     id="logo-upload"
@@ -1071,7 +1252,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 <button
                   type="button"
                   onClick={() => document.getElementById("logo-upload")?.click()}
-                  className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-white text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition flex items-center justify-center gap-2"
+                  className="mt-2 w-full px-4 py-2 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition flex items-center justify-center gap-2"
                 >
                   <Upload size={18} />
                   Choose File
@@ -1087,7 +1268,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 type="text"
                 value={formData.tagline}
                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
               />
             </div>
 
@@ -1099,7 +1280,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
               />
             </div>
 
@@ -1114,7 +1295,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       type="date"
                       value={formData.dateStarted}
                       onChange={(e) => setFormData({ ...formData, dateStarted: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                     />
                   </div>
                   <div>
@@ -1124,7 +1305,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                     <select
                       value={formData.fundingStage}
                       onChange={(e) => setFormData({ ...formData, fundingStage: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                       <option value="">Select stage</option>
                       <option value="pre-seeded">Pre-seeded</option>
@@ -1145,7 +1326,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   />
                 </div>
               </>
@@ -1161,7 +1342,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                     type="number"
                     value={formData.yearsOfExperience}
                     onChange={(e) => setFormData({ ...formData, yearsOfExperience: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   />
                 </div>
                 <div>
@@ -1178,7 +1359,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       })
                     }
                     placeholder="Web Development, Design, Marketing"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   />
                 </div>
                 <div>
@@ -1195,7 +1376,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       })
                     }
                     placeholder="Company A, Company B"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                   />
                 </div>
               </>
@@ -1220,7 +1401,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                             newFounders[index] = { ...newFounders[index], name: e.target.value }
                             setFormData({ ...formData, founders: newFounders })
                           }}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 mb-2"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 mb-2"
                         />
                         <input
                           type="text"
@@ -1231,7 +1412,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                             newFounders[index] = { ...newFounders[index], role: e.target.value }
                             setFormData({ ...formData, founders: newFounders })
                           }}
-                          className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                         />
                       </div>
                       <button
@@ -1252,7 +1433,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                   onClick={() => {
                     setFormData({ ...formData, founders: [...formData.founders, { name: "", role: "", linkedin: "" }] })
                   }}
-                  className="px-4 py-2 border border-gray-300 dark:border-white text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition"
                 >
                   + Add Founder
                 </button>
@@ -1277,7 +1458,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                           newMembers[index] = { ...newMembers[index], name: e.target.value }
                           setFormData({ ...formData, teamMembers: newMembers })
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 mb-2"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 mb-2"
                       />
                       <input
                         type="text"
@@ -1288,7 +1469,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                           newMembers[index] = { ...newMembers[index], role: e.target.value }
                           setFormData({ ...formData, teamMembers: newMembers })
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                       />
                     </div>
                     <button
@@ -1309,7 +1490,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 onClick={() => {
                   setFormData({ ...formData, teamMembers: [...formData.teamMembers, { name: "", role: "", linkedin: "" }] })
                 }}
-                className="px-4 py-2 border border-gray-300 dark:border-white text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition"
+                className="px-4 py-2 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-black transition"
               >
                 + Add Team Member
               </button>
@@ -1323,7 +1504,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                 type="url"
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
               />
             </div>
 
@@ -1336,7 +1517,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                   type="email"
                   value={formData.contactEmail}
                   onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
               </div>
               <div>
@@ -1347,7 +1528,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                   type="tel"
                   value={formData.contactPhone}
                   onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
               </div>
             </div>
@@ -1367,7 +1548,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       socialLinks: { ...formData.socialLinks, linkedin: e.target.value },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
                 <input
                   type="url"
@@ -1379,7 +1560,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       socialLinks: { ...formData.socialLinks, twitter: e.target.value },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
                 <input
                   type="url"
@@ -1391,7 +1572,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
                       socialLinks: { ...formData.socialLinks, github: e.target.value },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-white bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-white/20 bg-white dark:bg-black text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
               </div>
             </div>
@@ -1413,7 +1594,7 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
               <button
                 type="button"
                 onClick={() => setStep("select")}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-white text-gray-700 dark:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-black transition"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-black transition"
               >
                 Back
               </button>
@@ -1429,5 +1610,153 @@ function ShowcaseModal({ open, onClose, onSuccess, user, pods }: any) {
         </div>
       </div>
     </>
+  )
+}
+
+// Swipe View Component
+function SwipeView({ profiles, onProfileClick, onLike, onDelete, user }: any) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isFlipping, setIsFlipping] = useState(false)
+  const [flipDirection, setFlipDirection] = useState<"next" | "prev">("next")
+
+  // Reset index when profiles change
+  useEffect(() => {
+    setCurrentIndex(0)
+  }, [profiles.length])
+
+  const currentProfile = profiles[currentIndex]
+  const nextProfile = profiles[currentIndex + 1]
+  const prevProfile = profiles[currentIndex - 1]
+
+  const goToNext = () => {
+    if (currentIndex < profiles.length - 1 && !isFlipping) {
+      setIsFlipping(true)
+      setFlipDirection("next")
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1)
+        setIsFlipping(false)
+      }, 500) // Match animation duration
+    }
+  }
+
+  const goToPrevious = () => {
+    if (currentIndex > 0 && !isFlipping) {
+      setIsFlipping(true)
+      setFlipDirection("prev")
+      setTimeout(() => {
+        setCurrentIndex(currentIndex - 1)
+        setIsFlipping(false)
+      }, 500) // Match animation duration
+    }
+  }
+
+
+  if (!currentProfile) {
+    return (
+      <div className="flex items-center justify-center h-[700px]">
+        <div className="text-center">
+          <p className="text-lg text-gray-500 dark:text-gray-400 mb-2">No profiles available</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Switch to grid view to see all profiles</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-full h-[700px] overflow-hidden">
+      {/* Card container with flip animation */}
+      <div className="relative w-full h-full flex items-center justify-center" style={{ perspective: "1000px" }}>
+        {/* Previous card (behind) */}
+        {prevProfile && currentIndex > 0 && (
+          <div
+            className="absolute w-[95%] max-w-2xl transition-all duration-500 ease-in-out"
+            style={{
+              zIndex: isFlipping && flipDirection === "prev" ? 3 : 1,
+              opacity: isFlipping && flipDirection === "prev" ? 1 : 0,
+              transform: isFlipping && flipDirection === "prev" 
+                ? "rotateY(0deg) scale(1)" 
+                : "rotateY(90deg) scale(0.95)",
+              transformStyle: "preserve-3d",
+              backfaceVisibility: "hidden",
+            }}
+          >
+            <ProfileCard
+              profile={prevProfile}
+              onClick={() => onProfileClick(prevProfile)}
+              onLike={onLike}
+              onDelete={onDelete}
+              user={user}
+            />
+          </div>
+        )}
+
+        {/* Current card with flip */}
+        <div
+          className="absolute w-[95%] max-w-2xl transition-transform duration-500 ease-in-out"
+          style={{
+            zIndex: 2,
+            transformStyle: "preserve-3d",
+            transform: isFlipping
+              ? flipDirection === "next"
+                ? "rotateY(180deg)"
+                : "rotateY(-180deg)"
+              : "rotateY(0deg)",
+            opacity: isFlipping ? 0 : 1,
+            backfaceVisibility: "hidden",
+          }}
+        >
+          <ProfileCard
+            profile={currentProfile}
+            onClick={() => onProfileClick(currentProfile)}
+            onLike={onLike}
+            onDelete={onDelete}
+            user={user}
+          />
+        </div>
+
+        {/* Next card (behind) */}
+        {nextProfile && (
+          <div
+            className="absolute w-[95%] max-w-2xl transition-all duration-500 ease-in-out"
+            style={{
+              zIndex: isFlipping && flipDirection === "next" ? 3 : 1,
+              opacity: isFlipping && flipDirection === "next" ? 1 : 0,
+              transform: isFlipping && flipDirection === "next"
+                ? "rotateY(0deg) scale(1)"
+                : "rotateY(-90deg) scale(0.95)",
+              transformStyle: "preserve-3d",
+              backfaceVisibility: "hidden",
+            }}
+          >
+            <ProfileCard
+              profile={nextProfile}
+              onClick={() => onProfileClick(nextProfile)}
+              onLike={onLike}
+              onDelete={onDelete}
+              user={user}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Navigation buttons */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-6">
+        <button
+          onClick={goToPrevious}
+          disabled={currentIndex === 0 || isFlipping}
+          className="p-4 bg-white dark:bg-gray-800 rounded-full shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
+        >
+          <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
+        </button>
+
+        <button
+          onClick={goToNext}
+          disabled={currentIndex === profiles.length - 1 || isFlipping}
+          className="p-4 bg-white dark:bg-gray-800 rounded-full shadow-xl hover:shadow-2xl transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 active:scale-95 rotate-180"
+        >
+          <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
+        </button>
+      </div>
+    </div>
   )
 }

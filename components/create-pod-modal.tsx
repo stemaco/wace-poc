@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Spinner } from "@/components/ui/spinner"
 import { Upload, X } from "lucide-react"
 import Image from "next/image"
 
@@ -98,8 +99,10 @@ export default function CreatePodModal({ open, onClose, onCreate }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Pod</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+            Create New Pod
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-400">
             Fill in the details below to create your new pod.
           </DialogDescription>
         </DialogHeader>
@@ -146,13 +149,13 @@ export default function CreatePodModal({ open, onClose, onCreate }) {
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-white border-dashed rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-white">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload size={24} className="text-gray-400 dark:text-white mb-2" />
-                    <p className="mb-2 text-sm text-gray-500 dark:text-white">
+                    <Upload size={24} className="text-gray-400 dark:text-gray-500 mb-2" />
+                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
                       <span className="font-semibold">Click to upload</span> or drag and drop
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-white">PNG, JPG, WEBP (MAX. 5MB)</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">PNG, JPG, WEBP (MAX. 5MB)</p>
                   </div>
                   <input
                     id="logo"
@@ -166,11 +169,23 @@ export default function CreatePodModal({ open, onClose, onCreate }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isUploading}>
               Cancel
             </Button>
-            <Button type="submit" variant="default" disabled={isUploading}>
-              {isUploading ? "Uploading..." : "Create Pod"}
+            <Button 
+              type="submit" 
+              variant="default" 
+              disabled={isUploading || !podName.trim()}
+              className="bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100"
+            >
+              {isUploading ? (
+                <>
+                  <Spinner className="mr-2 h-4 w-4" />
+                  Uploading...
+                </>
+              ) : (
+                "Create Pod"
+              )}
             </Button>
           </DialogFooter>
         </form>
