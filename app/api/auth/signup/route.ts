@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import User from '@/models/User'
 import bcrypt from 'bcryptjs'
+import { allowedEmailDomains } from "@/lib/allowedDomains"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const domain = email.split("@")[1].toLowerCase()
+    if (!allowedEmailDomains.includes(domain)) {
+    return NextResponse.json(
+        { error: "Signup is only allowed with Gmail, Yahoo, Outlook, Hotmail, or iCloud emails" },
+        { status: 400 }
+      )
+    }
+    
     // Check if user already exists
     const existingUser = await User.findOne({ email })
     if (existingUser) {
