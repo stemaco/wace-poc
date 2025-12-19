@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!email || !password || !name) {
-      return NextResponse.json(
+        return NextResponse.json(
         { error: 'Email, password, and name are required' },
         { status: 400 }
       )
