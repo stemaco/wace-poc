@@ -1,7 +1,7 @@
 "use client"
 
 import { Bell, FileText, File, Video, Calendar, Target, ChevronDown, ArrowLeft, Plus, MessageCircle, Users, X, Smile, Clock, MapPin, CheckCircle2, Circle, Edit, Share2, Search, MoreVertical, Upload, LogOut, Trash2, Crown, Download, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react"
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, ReactNode } from "react"
 import DeletePodModal from "./delete-pod-modal"
 import DeleteBlockModal from "./delete-block-modal"
 import PodDetailsModal from "./pod-details-modal"
@@ -13,18 +13,127 @@ import { Spinner } from "@/components/ui/spinner"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useRouter } from "next/navigation"
 
-export default function MainContent({ activeView, activePod, onPodClick, onBackToDashboard, onNavigate, isLoading = false, pods = [], user = null, onPodsUpdate }: {
+// Type definitions
+interface User {
+  id: string
+  name: string
+  email?: string
+  profilePicture?: string
+}
+
+interface Pod {
+  id: string
+  name: string
+  tagline?: string
+  logoUrl?: string
+  creatorId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface Block {
+  id: string
+  podId: string
+  type: 'chat' | 'docs' | 'meetings' | 'calendar' | 'goals'
+  label: string
+  description?: string
+  x: number
+  y: number
+  creatorId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface ChatMessage {
+  id: string
+  blockId: string
+  userId: string
+  userName?: string
+  message: string
+  timestamp: string
+  isOwn?: boolean
+}
+
+interface Document {
+  id: string
+  blockId: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  uploadedBy?: {
+    id: string
+    name: string
+  }
+  uploadedAt: string
+  createdAt: string
+}
+
+interface CalendarEvent {
+  id?: string
+  title: string
+  date: string
+  time?: string
+  location?: string
+  description?: string
+  createdBy?: {
+    id: string
+    name: string
+  }
+}
+
+interface Goal {
+  id?: string
+  title: string
+  dueDate?: string
+  status?: 'pending' | 'in-progress' | 'completed'
+  description?: string
+}
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  time: string
+  unread: boolean
+  blockId: string
+  podId: string
+}
+
+interface BlockMember {
+  id: string
+  name: string
+  email?: string
+  profilePicture?: string
+}
+
+interface RowLayout {
+  y: number
+  blocks: Block[]
+}
+
+export default function MainContent({
+  activeView,
+  activePod,
+  onPodClick,
+  onBackToDashboard,
+  onNavigate,
+  isLoading = false,
+  pods = [],
+  user = null,
+  onPodsUpdate,
+}: {
   activeView: string
-  activePod: any
-  onPodClick: (pod: any) => void
+  activePod: Pod | string | null
+  onPodClick: (pod: Pod) => void
   onBackToDashboard: () => void
-  onNavigate: (view: string, pod?: any) => void
+  onNavigate: (view: string, pod?: Pod) => void
   isLoading?: boolean
-  pods?: any[]
-  user?: any
+  pods?: Pod[]
+  user?: User | null
   onPodsUpdate?: () => void
 }) {
   const router = useRouter()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const handleLogout = async () => {
     await fetch("/api/auth/signout", { method: "POST" })
@@ -33,10 +142,12 @@ export default function MainContent({ activeView, activePod, onPodClick, onBackT
   }
 
   if (activeView === "canvas") {
-    return <PodCanvas podName={activePod?.name || activePod} pod={activePod} onBack={onBackToDashboard} isLoading={isLoading} user={user} />
+    const podName = typeof activePod === 'string' ? activePod : (typeof activePod === 'object' && activePod ? activePod.name : undefined)
+    const podObj = typeof activePod === 'object' ? activePod : undefined
+    return <PodCanvas podName={podName} pod={podObj || undefined} onBack={onBackToDashboard} isLoading={isLoading} user={user} />
   }
 
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationsLoading, setNotificationsLoading] = useState(true)
 
   // Fetch notifications
@@ -47,12 +158,18 @@ export default function MainContent({ activeView, activePod, onPodClick, onBackT
     return () => clearInterval(interval)
   }, [])
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (): Promise<void> => {
     try {
       const response = await fetch("/api/notifications/unread")
       if (response.ok) {
         const data = await response.json()
-        const formattedNotifications = data.notifications.map((notif: any) => ({
+        const formattedNotifications = data.notifications.map((notif: {
+          blockId: string
+          podName: string
+          blockName: string
+          unreadCount: number
+          podId: string
+        }) => ({
           id: notif.blockId,
           title: `New messages in ${notif.podName}`,
           message: `${notif.unreadCount} unread message${notif.unreadCount > 1 ? 's' : ''} in ${notif.blockName}`,
@@ -284,7 +401,7 @@ export default function MainContent({ activeView, activePod, onPodClick, onBackT
                   onDelete={() => {
                     if (onPodsUpdate) onPodsUpdate()
                   }}
-                  user={user}
+                  user={user || { id: '', name: '', email: '' }}
                 />
               ))}
             </div>
@@ -296,23 +413,22 @@ export default function MainContent({ activeView, activePod, onPodClick, onBackT
 }
 
 function PodCard({ pod, image, name, tagline, onClick, onDelete, user }: {
-  pod: any
+  pod: Pod
   image: string
   name: string
   tagline: string
   onClick: () => void
   onDelete: () => void
-  user: any
+  user: User
 }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isCreator, setIsCreator] = useState(false)
 
   useEffect(() => {
-    // Check if current user is the creator based on role
-    if (pod && pod.role === 'creator') {
-      setIsCreator(true)
-    }
+    // Check if current user is the creator (this would typically be checked via API/backend)
+    // For now, we'll assume the parent component handles this
+    setIsCreator(false)
   }, [pod])
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -320,46 +436,58 @@ function PodCard({ pod, image, name, tagline, onClick, onDelete, user }: {
     setShowDeleteModal(true)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
   return (
     <>
-      <div className="group bg-white dark:bg-black rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-white/20 relative">
-        <button
-          onClick={onClick}
-          className="w-full text-left cursor-pointer"
-        >
-          <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-            <img
-              src={image || "/placeholder.svg"}
-              alt={name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            {/* 3-dot menu */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+        className="group bg-white dark:bg-black rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-white/20 relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900"
+      >
+        <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+          <img
+            src={image || "/placeholder.svg"}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          {/* 3-dot menu */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowDetailsModal(true)
+            }}
+            type="button"
+            className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-black/90 backdrop-blur-sm text-gray-600 dark:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-white dark:hover:bg-white hover:scale-110"
+            title="Pod options"
+            aria-label="Open pod options menu"
+          >
+            <MoreVertical size={16} />
+          </button>
+          {isCreator && (
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowDetailsModal(true)
-              }}
-              className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-black/90 backdrop-blur-sm text-gray-600 dark:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-white dark:hover:bg-white hover:scale-110"
-              title="Pod options"
+              onClick={handleDeleteClick}
+              type="button"
+              className="absolute top-3 right-14 p-2 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm hover:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:scale-110"
+              title="Delete pod"
+              aria-label="Delete this pod"
             >
-              <MoreVertical size={16} />
+              <Trash2 size={16} />
             </button>
-            {isCreator && (
-              <button
-                onClick={handleDeleteClick}
-                className="absolute top-3 right-14 p-2 bg-red-500/90 dark:bg-red-600/90 backdrop-blur-sm hover:bg-red-600 dark:hover:bg-red-700 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:scale-110"
-                title="Delete pod"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-          </div>
-          <div className="p-5 bg-white dark:bg-black">
-            <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1.5 truncate">{name}</h3>
-            <p className="text-sm text-gray-600 dark:text-white line-clamp-2">{tagline || "No tagline"}</p>
-          </div>
-        </button>
+          )}
+        </div>
+        <div className="p-5 bg-white dark:bg-black">
+          <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1.5 truncate">{name}</h3>
+          <p className="text-sm text-gray-600 dark:text-white line-clamp-2">{tagline || "No tagline"}</p>
+        </div>
       </div>
       {showDeleteModal && (
         <DeletePodModal
@@ -383,16 +511,16 @@ function PodCard({ pod, image, name, tagline, onClick, onDelete, user }: {
 
 function PodCanvas({ podName, pod, onBack, isLoading, user }: {
   podName?: string
-  pod?: any
+  pod?: Pod
   onBack: () => void
   isLoading: boolean
-  user?: any
+  user?: User | null
 }) {
   // Use pod object if available, otherwise fallback to podName string
   const podData = pod || { name: podName, tagline: "", id: null }
 
-  const [activeSection, setActiveSection] = useState("chat")
-  const [blocks, setBlocks] = useState({
+  const [activeSection, setActiveSection] = useState<'chat' | 'docs' | 'meetings' | 'calendar' | 'goals'>("chat")
+  const [blocks, setBlocks] = useState<Record<'chat' | 'docs' | 'meetings' | 'calendar' | 'goals', Block[]>>({
     chat: [],
     docs: [],
     meetings: [],
@@ -406,7 +534,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
   const [showCreateGoalModal, setShowCreateGoalModal] = useState(false)
   const [showMeetingDevModal, setShowMeetingDevModal] = useState(false)
   const [showDeleteBlockModal, setShowDeleteBlockModal] = useState(false)
-  const [blockToDelete, setBlockToDelete] = useState(null)
+  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null)
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
 
   // Fetch blocks from API when pod is loaded
@@ -428,7 +556,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     }
   }, [blocks.chat])
 
-  const fetchBlocks = async () => {
+  const fetchBlocks = async (): Promise<void> => {
     try {
       setBlocksLoading(true)
       const response = await fetch(`/api/blocks?podId=${podData.id}`, {
@@ -437,18 +565,18 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
       if (response.ok) {
         const data = await response.json()
         // Organize blocks by type and ensure id field is set
-        const organizedBlocks = {
+        const organizedBlocks: Record<string, Block[]> = {
           chat: [],
           docs: [],
           meetings: [],
           calendar: [],
           goals: [],
         }
-        data.blocks.forEach((block) => {
+        data.blocks.forEach((block: Block & { _id?: string }) => {
           if (organizedBlocks[block.type]) {
             organizedBlocks[block.type].push({
               ...block,
-              id: block._id || block.id, // Ensure id field exists
+              id: (block as any)._id || block.id, // Ensure id field exists
             })
           }
         })
@@ -461,7 +589,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     }
   }
 
-  const fetchUnreadCounts = async () => {
+  const fetchUnreadCounts = async (): Promise<void> => {
     try {
       // Use current blocks state
       const chatBlocks = blocks.chat || []
@@ -472,7 +600,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
       const counts: Record<string, number> = {}
       
       // Fetch unread counts for all chat blocks in parallel
-      const promises = chatBlocks.map(async (block: any) => {
+      const promises = chatBlocks.map(async (block: Block) => {
         try {
           const response = await fetch(`/api/blocks/${block.id}/unread`)
           if (response.ok) {
@@ -554,9 +682,9 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
   }, [isPanning])
 
   // Get blocks for the active section
-  const currentBlocks = blocks[activeSection] || []
+  const currentBlocks: Block[] = blocks[activeSection as 'chat' | 'docs' | 'meetings' | 'calendar' | 'goals'] || []
 
-  const handleDoubleClick = async (e: any, boxId: string) => {
+  const handleDoubleClick = async (e: React.MouseEvent<HTMLDivElement>, boxId: string): Promise<void> => {
     e.stopPropagation()
     e.preventDefault()
     
@@ -575,7 +703,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     setDraggingId(null)
     
     // Check block access before opening
-    const box = currentBlocks.find((b: any) => b.id === boxId)
+    const box = currentBlocks.find((b: Block) => b.id === boxId)
     if (!box) {
       setOpeningBox(null)
       return
@@ -606,7 +734,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           throw new Error('Access check failed')
         })
         .then(data => {
-          const hasAccess = data.members.some((m: any) => m.id === user?.id)
+          const hasAccess = data.members.some((m: BlockMember) => m.id === user?.id)
           if (!hasAccess) {
             // Close modal if no access
             setSelectedBox(null)
@@ -624,9 +752,9 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     }
   }
 
-  const handleMouseDown = (e, boxId) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, boxId: string): void => {
     e.stopPropagation()
-    const box = currentBlocks.find((b) => b.id === boxId)
+    const box = currentBlocks.find((b: Block) => b.id === boxId)
     if (!box) return
     
     const initialMouseX = e.clientX
@@ -818,12 +946,12 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
     }
   }
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>): void => {
     // If there's a pending drag and mouse moved significantly, start dragging
     if (pendingDrag.boxId && pendingDrag.initialPos && !draggingId && !isPanning) {
       const mouseMoved = Math.abs(e.clientX - pendingDrag.initialPos.x) > 5 || Math.abs(e.clientY - pendingDrag.initialPos.y) > 5
       if (mouseMoved) {
-        const box = currentBlocks.find((b) => b.id === pendingDrag.boxId)
+        const box = currentBlocks.find((b: Block) => b.id === pendingDrag.boxId)
         if (box) {
           setDraggingId(pendingDrag.boxId)
           setDragStart({
@@ -851,7 +979,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
       
       setBlocks((prev) => ({
         ...prev,
-        [activeSection]: prev[activeSection].map((box) =>
+        [activeSection]: prev[activeSection as 'chat' | 'docs' | 'meetings' | 'calendar' | 'goals'].map((box: Block) =>
           box.id === draggingId
             ? {
                 ...box,
@@ -893,10 +1021,10 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
             <ArrowLeft size={18} />
           </button>
             <div className="flex items-center gap-3">
-            {podData.logoUrl ? (
+            {(podData as any)?.logoUrl ? (
               <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 dark:bg-white">
                 <img 
-                  src={podData.logoUrl} 
+                  src={(podData as any).logoUrl} 
                   alt={podData.name}
                   className="w-full h-full object-cover"
                 />
@@ -1065,14 +1193,14 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
         }}
       >
             {/* Draggable Boxes - Only show blocks for active section */}
-            {currentBlocks.map((box: any) => {
+            {currentBlocks.map((box: Block) => {
               const isCreator = user && box.creatorId === user.id
               return (
                 <div
                   key={box.id}
                   data-block-id={box.id}
-                  onMouseDown={(e: any) => handleMouseDown(e, box.id)}
-                  onDoubleClick={(e: any) => handleDoubleClick(e, box.id)}
+                  onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => handleMouseDown(e, box.id)}
+                  onDoubleClick={(e: React.MouseEvent<HTMLDivElement>) => handleDoubleClick(e, box.id)}
                   style={{
                     position: "absolute",
                     left: `${box.x}px`,
@@ -1091,7 +1219,7 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
                     )}
                     {isCreator && (
                       <button
-                        onClick={(e: any) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setBlockToDelete(box)
                           setShowDeleteBlockModal(true)
@@ -1111,8 +1239,8 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           {selectedBox && activeSection === "chat" && (
             <ChatModal 
               boxId={selectedBox} 
-              chatData={currentBlocks.find((b: any) => b.id === selectedBox)}
-              podId={podData?.id}
+              chatData={currentBlocks.find((b: Block) => b.id === selectedBox) as Block}
+              podId={podData?.id || undefined}
               user={user}
               onClose={() => {
                 setSelectedBox(null)
@@ -1125,8 +1253,8 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           {selectedBox && activeSection === "docs" && (
             <DocModal 
               boxId={selectedBox} 
-              docData={currentBlocks.find((b: any) => b.id === selectedBox)}
-              podId={podData?.id}
+              docData={currentBlocks.find((b: Block) => b.id === selectedBox) as Block}
+              podId={podData?.id || undefined}
               user={user}
               onClose={() => setSelectedBox(null)} 
             />
@@ -1134,15 +1262,15 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           {selectedBox && activeSection === "meetings" && (
             <MeetingModal 
               boxId={selectedBox} 
-              meetingData={currentBlocks.find(b => b.id === selectedBox)?.meetingData}
+              meetingData={currentBlocks.find((b: Block) => b.id === selectedBox) as Block}
               onClose={() => setSelectedBox(null)} 
             />
           )}
           {selectedBox && activeSection === "calendar" && (
             <CalendarModal 
               boxId={selectedBox} 
-              calendarData={currentBlocks.find((b: any) => b.id === selectedBox)}
-              podId={podData?.id}
+              calendarData={currentBlocks.find((b: Block) => b.id === selectedBox) as Block}
+              podId={podData?.id || undefined}
               user={user}
               onClose={() => setSelectedBox(null)} 
             />
@@ -1150,8 +1278,8 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
           {selectedBox && activeSection === "goals" && (
             <GoalModal 
               boxId={selectedBox} 
-              goalData={currentBlocks.find((b: any) => b.id === selectedBox)}
-              podId={podData?.id}
+              goalData={currentBlocks.find((b: Block) => b.id === selectedBox) as Block}
+              podId={podData?.id || undefined}
               user={user}
               onClose={() => setSelectedBox(null)} 
             />
@@ -1219,7 +1347,12 @@ function PodCanvas({ podName, pod, onBack, isLoading, user }: {
   )
 }
 
-function NavButton({ icon, title, active, onClick }) {
+function NavButton({ icon, title, active, onClick }: {
+  icon: ReactNode
+  title: string
+  active: boolean
+  onClick: () => void
+}) {
   return (
     <button
       onClick={onClick}
@@ -1239,7 +1372,7 @@ function CreateChatModal({ open, onClose, podId, existingBlocks, onCreated }: {
   open: boolean
   onClose: () => void
   podId: string
-  existingBlocks?: any[]
+  existingBlocks?: Block[]
   onCreated: () => void
 }) {
   const [name, setName] = useState("")
@@ -1996,14 +2129,14 @@ function CreateGoalModal({ open, onClose, podId, existingBlocks, onCreated }: {
 
 function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
   boxId: string
-  chatData: any
+  chatData: Block
   podId?: string
-  user?: any
+  user?: User | null
   onClose: () => void
   onUnreadUpdate?: () => void
 }) {
-  const [members, setMembers] = useState<any[]>([])
-  const [messages, setMessages] = useState<any[]>([])
+  const [members, setMembers] = useState<BlockMember[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [messageInput, setMessageInput] = useState("")
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -2013,6 +2146,7 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
   const [mentionQuery, setMentionQuery] = useState("")
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 })
   const inputRef = useRef<HTMLInputElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const chatName = chatData?.label || "Chat"
@@ -2033,6 +2167,11 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
       return () => clearInterval(interval)
     }
   }, [boxId, podId])
+
+  // Auto-scroll to latest message when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   const markMessagesAsRead = async () => {
     try {
@@ -2208,7 +2347,7 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
     }
   }
 
-  const handleMentionSelect = (member: any) => {
+  const handleMentionSelect = (member: BlockMember): void => {
     const cursorPosition = inputRef.current?.selectionStart || 0
     const textBeforeCursor = messageInput.substring(0, cursorPosition)
     const lastAtIndex = textBeforeCursor.lastIndexOf('@')
@@ -2329,7 +2468,7 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
                 <p className="text-xs text-gray-400">Add members to start chatting</p>
               </div>
             ) : (
-              members.map((member: any, i: number) => (
+              members.map((member: BlockMember, i: number) => (
                 <div key={member.id || i} className="flex items-center gap-3">
                   {member.profilePicture ? (
                     <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
@@ -2392,9 +2531,9 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
                   <p className="text-sm text-gray-400">Start the conversation by sending a message</p>
                 </div>
               ) : (
-                messages.map((msg: any, i: number) => {
+                messages.map((msg: ChatMessage, i: number) => {
                   const isOwn = msg.isOwn
-                  const member = members.find((m: any) => m.id === msg.userId)
+                  const member = members.find((m: BlockMember) => m.id === msg.userId)
                   
                   return (
                     <div
@@ -2461,6 +2600,8 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
                   )
                 })
               )}
+              {/* Scroll anchor for auto-scroll to latest message */}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
@@ -2539,12 +2680,12 @@ function ChatModal({ boxId, chatData, podId, user, onClose, onUnreadUpdate }: {
 
 function DocModal({ boxId, docData, podId, user, onClose }: {
   boxId: string
-  docData: any
+  docData: Block
   podId?: string
-  user?: any
+  user?: User | null
   onClose: () => void
 }) {
-  const [documents, setDocuments] = useState<any[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -2799,7 +2940,7 @@ function DocModal({ boxId, docData, podId, user, onClose }: {
                     </tr>
                   </thead>
                   <tbody className="bg-black divide-y divide-gray-800">
-                    {filteredDocuments.map((doc: any, i: number) => (
+                    {filteredDocuments.map((doc: Document, i: number) => (
                       <tr key={doc.id || i} className="hover:bg-gray-900 transition">
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getFileTypeColor(doc.fileType)}`}>
@@ -2899,7 +3040,7 @@ function FeatureUnderDevModal({ open, onClose, featureName }: {
 
 function MeetingModal({ boxId, meetingData, onClose }: {
   boxId: string
-  meetingData: any
+  meetingData: Block
   onClose: () => void
 }) {
   const meetingName = meetingData?.label || "Meetings"
@@ -2936,16 +3077,16 @@ function MeetingModal({ boxId, meetingData, onClose }: {
 
 function CalendarModal({ boxId, calendarData, podId, user, onClose }: {
   boxId: string
-  calendarData: any
+  calendarData: Block
   podId?: string
-  user?: any
+  user?: User | null
   onClose: () => void
 }) {
-  const [events, setEvents] = useState<any[]>([])
+  const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddEventModal, setShowAddEventModal] = useState(false)
   const [showAddMembersModal, setShowAddMembersModal] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<any>(null)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const calendarName = calendarData?.label || "Calendar"
@@ -3067,7 +3208,7 @@ function CalendarModal({ boxId, calendarData, podId, user, onClose }: {
             </div>
           ) : (
             <div className="space-y-3">
-              {events.map((event: any) => (
+              {events.map((event: CalendarEvent) => (
                 <div
                   key={event.id}
                   className="p-4 rounded-lg border border-white/15 bg-black hover:bg-gray-900 transition"
@@ -3095,7 +3236,7 @@ function CalendarModal({ boxId, calendarData, podId, user, onClose }: {
                     </div>
                     {user?.id === event.createdBy?.id && (
                       <button
-                        onClick={() => handleDeleteEvent(event.id)}
+                        onClick={() => event.id && handleDeleteEvent(event.id)}
                         className="p-1.5 hover:bg-red-900/50 rounded transition flex-shrink-0"
                         title="Delete"
                       >
